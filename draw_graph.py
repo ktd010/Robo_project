@@ -1,21 +1,22 @@
-#pip install networkx matplotlib
-
-
 import networkx as nx
 import matplotlib.pyplot as plt
 
-# Given tuple with objects and directions
-arrangement_tuple = (('plate', 'center'), ('fork', 'right'), ('spoon', 'left'))
+def draw_graph(arrangement_tuple):
+    G = nx.Graph()
 
-# Create a directed graph
-G = nx.DiGraph()
+    for node, position in arrangement_tuple:
+        G.add_node(node)
 
-# Add nodes and edges based on the arrangement tuple
-for obj, direction in arrangement_tuple:
-    G.add_node(obj)  # Add the object as a node
-    G.add_edge(obj, direction)  # Add an edge from the object to the direction
+    for i in range(len(arrangement_tuple)-1):
+        G.add_edge(arrangement_tuple[i][0], arrangement_tuple[i+1][0])
 
-# Plot the graph
-pos = nx.spring_layout(G)
-nx.draw(G, pos, with_labels=True, font_weight='bold', node_size=1000, node_color='skyblue', font_size=10, edge_color='gray')
-plt.show()
+    pos = {node: (i, arrangement_tuple.index((node, position))) for i, (node, position) in enumerate(arrangement_tuple)}
+
+    nx.draw(G, pos, with_labels=True, node_size=1000, node_color='lightblue', font_size=10, font_color='black', font_weight='bold', arrowsize=20)
+
+    plt.title("Vertices Graph based on Arrangement Tuple")
+    plt.show()
+
+# Example usage
+arrangement_tuple = (('plate', 'center'), ('fork', 'left'), ('spoon', 'right'))
+draw_graph(arrangement_tuple)
