@@ -2,6 +2,7 @@ import cv2
 import argparse
 import numpy as np
 from  PIL  import  Image
+import torch
 
 from lang_sam import LangSAM
 from lang_sam.utils import draw_image
@@ -107,12 +108,11 @@ def check_position_in_img(mask, center_pt):
 
     return position
 
-def get_mask_center_pt(mask):
-    
-    pts = np.where(mask == 255)[1]
-    median = np.median(pts)
-
-    return median
+def get_center_pt(box):
+    x = ((box[0] + box[2]) // 2).item()
+    y = ((box[1] + box[3]) // 2).item()
+    center_pt = torch.tensor((x, y))
+    return center_pt
 
 def shift_horizontally(mask, desired_position):
     mask = mask
@@ -163,10 +163,10 @@ def display_masks(mask):
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
-def run_segmentor(image_path, object_arrangement_response):
+def run_segmentor(image_path, object_arrangement_response, show_widths=False):
     model = LangSAM()
     image_pil = Image.open(image_path).convert("RGB")
-    arrangement_dict = {'plate': 'center', 'fork': 'left', 'spoon': 'right', 'knife': 'right'}
+    # arrangement_dict = {'plate': 'center', 'fork': 'left', 'spoon': 'right', 'knife': 'right'}
 
     text_prompt = 'fork, spoon, knife, plate'
     # position = ['left', 'right', 'right', 'center']
@@ -175,13 +175,17 @@ def run_segmentor(image_path, object_arrangement_response):
     # image = draw_image(image_array, masks, boxes, labels)
     bin_arr_list = []
 
-    for mask, label in zip(masks,labels):
+    for mask, box, label in zip(masks, boxes, labels):
         arr = mask.cpu().numpy().astype(np.uint8)
         arr[arr == 1] = 255
-        angle = get_angle(arr)
-        if angle is not None:
-            arr = rotate(arr, angle)
-        arr = shift_horizontally(arr, arrangement_dict[label])
+        # angle = get_angle(arr)
+        center_pt = get_center_pt(box)
+        # if angle is not None:
+        #     arr = rotate(arr, angle)
+        # if show_widths:
+        #     width = np.max(arr[1]) - np.min(arr[1])
+        #     print(f'Width for {label} is {width} pixels')
+        arr = shift_horizontally(arr, object_arrangement_response[label])
         bin_arr_list.append(arr)
 
     final_mask = sum(bin_arr_list)
@@ -192,11 +196,12 @@ def run_segmentor(image_path, object_arrangement_response):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--image_path', type=str, default= 'assets/dining1.jpg')
+    parser.add_argument('--image_path', type=str, default= 'assets/dining.jpg')
+    parser.add_argument('--object_arrangment_response', type=dict, default= {'plate': 'center', 'fork': 'left', 'spoon': 'right', 'knife': 'right'})
 
     args = parser.parse_args()
 
-    run_segmentor(args.image_path)
+    run_segmentor(args.image_path, args.object_arrangment_response)
 
 
 
